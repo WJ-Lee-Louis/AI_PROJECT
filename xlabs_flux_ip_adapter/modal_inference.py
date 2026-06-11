@@ -1,4 +1,5 @@
 from pathlib import Path
+from urllib.parse import urlparse
 
 import modal
 
@@ -10,7 +11,9 @@ from shared.modal_runtime import (
 )
 from xlabs_flux_ip_adapter.config import (
     APP_NAME,
+    DEFAULT_OUTPUT_DIR,
     DEFAULT_OUTPUT_PATH,
+    DEFAULT_REFERENCE_IMAGE_PATH,
     DEFAULT_REFERENCE_IMAGE_URL,
 )
 
@@ -18,6 +21,39 @@ from xlabs_flux_ip_adapter.config import (
 app = modal.App(APP_NAME)
 hf_cache = build_hf_cache_volume()
 image = build_diffusers_image()
+
+
+def next_available_path(path: Path) -> Path:
+    if not path.exists():
+        return path
+
+    for index in range(1, 1000):
+        candidate = path.with_name(f"{path.stem}_{index:03d}{path.suffix}")
+        if not candidate.exists():
+            return candidate
+
+    raise RuntimeError(f"Could not find an available output path for {path}")
+
+
+def reference_stem(reference_image_path: str, reference_image_url: str) -> str:
+    if reference_image_path:
+        return Path(reference_image_path).stem
+
+    url_path = urlparse(reference_image_url).path
+    stem = Path(url_path).stem
+    return stem or "reference"
+
+
+def resolve_output_path(
+    output_path: str,
+    reference_image_path: str,
+    reference_image_url: str,
+) -> Path:
+    if output_path:
+        return Path(output_path)
+
+    filename = f"{reference_stem(reference_image_path, reference_image_url)}_generated.png"
+    return next_available_path(Path(DEFAULT_OUTPUT_DIR) / filename)
 
 
 @app.function(
@@ -30,6 +66,7 @@ image = build_diffusers_image()
 def generate_with_xlabs_ip_adapter(
     prompt: str,
     reference_image_url: str,
+    reference_image_bytes: bytes | None = None,
     ip_adapter_scale: float = 1.0,
     guidance_scale: float = 4.0,
     num_inference_steps: int = 20,
@@ -42,6 +79,7 @@ def generate_with_xlabs_ip_adapter(
     return generate_png_bytes(
         prompt=prompt,
         reference_image_url=reference_image_url,
+        reference_image_bytes=reference_image_bytes,
         ip_adapter_scale=ip_adapter_scale,
         guidance_scale=guidance_scale,
         num_inference_steps=num_inference_steps,
@@ -55,6 +93,7 @@ def generate_with_xlabs_ip_adapter(
 def main(
     prompt: str = "a portrait photo of the same person wearing a black jacket, studio lighting",
     reference_image_url: str = DEFAULT_REFERENCE_IMAGE_URL,
+    reference_image_path: str = DEFAULT_REFERENCE_IMAGE_PATH,
     ip_adapter_scale: float = 1.0,
     guidance_scale: float = 4.0,
     num_inference_steps: int = 20,
@@ -63,9 +102,18 @@ def main(
     height: int = 1024,
     output_path: str = DEFAULT_OUTPUT_PATH,
 ):
+    reference_image_bytes = None
+    if reference_image_path:
+        reference_path = Path(reference_image_path)
+        reference_image_bytes = reference_path.read_bytes()
+        print(f"Using local reference image: {reference_path.resolve()}")
+    else:
+        print(f"Using reference image URL: {reference_image_url}")
+
     output_bytes = generate_with_xlabs_ip_adapter.remote(
         prompt=prompt,
         reference_image_url=reference_image_url,
+        reference_image_bytes=reference_image_bytes,
         ip_adapter_scale=ip_adapter_scale,
         guidance_scale=guidance_scale,
         num_inference_steps=num_inference_steps,
@@ -74,7 +122,11 @@ def main(
         height=height,
     )
 
-    path = Path(output_path)
+    path = resolve_output_path(
+        output_path=output_path,
+        reference_image_path=reference_image_path,
+        reference_image_url=reference_image_url,
+    )
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_bytes(output_bytes)
     print(f"Saved image to {path.resolve()}")

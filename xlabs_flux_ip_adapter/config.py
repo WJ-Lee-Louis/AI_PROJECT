@@ -9,4 +9,6 @@ DEFAULT_REFERENCE_IMAGE_URL = (
     "https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/"
     "diffusers/flux_ip_adapter_input.jpg"
 )
-DEFAULT_OUTPUT_PATH = "outputs/xlabs_flux_ip_adapter.png"
+DEFAULT_REFERENCE_IMAGE_PATH = ""
+DEFAULT_OUTPUT_DIR = "outputs/xlabs_flux_ip_adapter"
+DEFAULT_OUTPUT_PATH = ""

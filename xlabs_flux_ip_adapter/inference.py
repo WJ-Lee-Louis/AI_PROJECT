@@ -2,6 +2,7 @@ from io import BytesIO
 
 import torch
 from diffusers.utils import load_image
+from PIL import Image
 
 from xlabs_flux_ip_adapter.conditioning import (
     apply_conditioning_controls,
@@ -10,9 +11,16 @@ from xlabs_flux_ip_adapter.conditioning import (
 from xlabs_flux_ip_adapter.model_loader import load_pipeline
 
 
+def load_reference_image(reference_image_url: str, reference_image_bytes: bytes | None):
+    if reference_image_bytes is not None:
+        return Image.open(BytesIO(reference_image_bytes))
+    return load_image(reference_image_url)
+
+
 def generate_png_bytes(
     prompt: str,
     reference_image_url: str,
+    reference_image_bytes: bytes | None,
     ip_adapter_scale: float,
     guidance_scale: float,
     num_inference_steps: int,
@@ -24,7 +32,7 @@ def generate_png_bytes(
     pipe = apply_conditioning_controls(pipe, ip_adapter_scale=ip_adapter_scale)
 
     reference_image = prepare_reference_image(
-        load_image(reference_image_url),
+        load_reference_image(reference_image_url, reference_image_bytes),
         width=width,
         height=height,
     )

@@ -33,4 +33,5 @@ def build_diffusers_image() -> modal.Image:
                 "PYTHONUNBUFFERED": "1",
             }
         )
+        .add_local_python_source("shared", "xlabs_flux_ip_adapter")
     )

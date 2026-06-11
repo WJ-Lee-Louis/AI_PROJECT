@@ -48,11 +48,13 @@ $env:PYTHONUTF8='1'
 python -m modal run xlabs_flux_ip_adapter/modal_inference.py
 ```
 
-The default output is written locally to:
+The default output is written locally with the reference image name:
 
 ```text
-outputs/xlabs_flux_ip_adapter.png
+outputs/xlabs_flux_ip_adapter/<reference_name>_generated.png
 ```
+
+If that file already exists, the script writes the next available filename, such as `<reference_name>_generated_001.png`.
 
 Override inference arguments from the CLI:
 
@@ -64,6 +66,18 @@ python -m modal run xlabs_flux_ip_adapter/modal_inference.py `
   --num-inference-steps 20 `
   --seed 123
 ```
+
+Use a local reference image from this project:
+
+```powershell
+python -m modal run xlabs_flux_ip_adapter/modal_inference.py `
+  --prompt "a portrait photo of the same person wearing a white hoodie, outdoor daylight" `
+  --reference-image-path "xlabs_flux_ip_adapter/reference_images/person_01.png" `
+  --ip-adapter-scale 1.0 `
+  --seed 123
+```
+
+When `--reference-image-path` is provided, the local image is read by the VSCode/PowerShell process and sent to the Modal GPU function as bytes. The remote container does not need direct access to your local path.
 
 ## Credit notes
 
