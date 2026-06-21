@@ -23,12 +23,13 @@ hf_cache = build_hf_cache_volume()
 image = build_diffusers_image()
 
 
-def next_available_path(path: Path) -> Path:
-    if not path.exists():
-        return path
+def clean_path_arg(value: str) -> str:
+    return value.strip().strip("\"'“”")
 
-    for index in range(1, 1000):
-        candidate = path.with_name(f"{path.stem}_{index:03d}{path.suffix}")
+
+def next_available_path(path: Path) -> Path:
+    for index in range(100):
+        candidate = path.with_name(f"{path.stem}_{index:02d}{path.suffix}")
         if not candidate.exists():
             return candidate
 
@@ -49,10 +50,14 @@ def resolve_output_path(
     reference_image_path: str,
     reference_image_url: str,
 ) -> Path:
-    if output_path:
-        return Path(output_path)
-
     filename = f"{reference_stem(reference_image_path, reference_image_url)}_generated.png"
+
+    if output_path:
+        path = Path(clean_path_arg(output_path))
+        if path.suffix:
+            return next_available_path(path)
+        return next_available_path(path / filename)
+
     return next_available_path(Path(DEFAULT_OUTPUT_DIR) / filename)
 
 
@@ -104,7 +109,7 @@ def main(
 ):
     reference_image_bytes = None
     if reference_image_path:
-        reference_path = Path(reference_image_path)
+        reference_path = Path(clean_path_arg(reference_image_path))
         reference_image_bytes = reference_path.read_bytes()
         print(f"Using local reference image: {reference_path.resolve()}")
     else:

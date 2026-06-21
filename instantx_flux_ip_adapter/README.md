@@ -57,10 +57,20 @@ InstantX's model card example uses `scale=0.7`, so this scaffold uses the same d
 Outputs are written to:
 
 ```text
-outputs/instantx_flux_ip_adapter/<reference_name>_generated.png
+outputs/instantx_flux_ip_adapter/<reference_name>_generated_00.png
 ```
 
-If the filename already exists, `_001`, `_002`, and so on are appended.
+If the filename already exists, `_01`, `_02`, and so on are appended. The same numbering rule is used when `--output-path` is provided.
+
+`--output-path` can be either a directory or a PNG filename:
+
+```powershell
+--output-path "outputs/my_run"
+# saves outputs/my_run/<reference_name>_generated_00.png
+
+--output-path "outputs/my_run/custom_name.png"
+# saves outputs/my_run/custom_name_00.png
+```
 
 ## Notes
 
